@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IGA Whiteboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Permanent+Marker&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:       #2255AA;
+  --green:      #1A8A6E;
+  --red:        #CC2233;
+  --wood1:      #C8A96E;
+  --wood2:      #8B6530;
+  --wb-bg:      #F4F4F0;
+  --bg-default: #0c6062;
+  --bg-running: #0d4b09;
+  --bg-resting: #801010;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: 'Kalam', cursive;
+  background: var(--bg-default);
+}
+
+/* ═══════════════════════════════════
+   WHITEBOARD SCREEN
+   ═══════════════════════════════════ */
+#screen-whiteboard {
+  display: flex;
+  width: 100%; height: 100%;
+  background: var(--wb-bg);
+  position: relative;
+  cursor: pointer;
+}
+
+.frame-top    { position:absolute; top:0;    left:0; width:100%; height:clamp(0.5rem,1.5vh,1.125rem); background:linear-gradient(180deg,var(--wood1),var(--wood2)); z-index:10; pointer-events:none; }
+.frame-bottom { position:absolute; bottom:0; left:0; width:100%; height:clamp(0.5rem,1.5vh,1.125rem); background:linear-gradient(0deg,var(--wood1),var(--wood2)); z-index:10; pointer-events:none; }
+.frame-left   { position:absolute; top:0;    left:0; width:clamp(0.5rem,1.2vw,1.125rem); height:100%; background:linear-gradient(90deg,var(--wood1),var(--wood2)); z-index:10; pointer-events:none; }
+.frame-right  { position:absolute; top:0;   right:0; width:clamp(0.5rem,1.2vw,1.125rem); height:100%; background:linear-gradient(270deg,var(--wood1),var(--wood2)); z-index:10; pointer-events:none; }
+.glare {
+  position:absolute; top:3vh; right:12vw;
+  width:8vw; height:2.5vh;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,0.55),transparent);
+  border-radius:50%; transform:rotate(-20deg); pointer-events:none; z-index:5;
+}
+
+.wb-inner {
+  position: absolute;
+  inset: clamp(0.5rem,1.5vh,1.125rem) clamp(0.5rem,1.2vw,1.125rem);
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  grid-template-rows: 1fr auto;
+  padding: 2vh 2.5vw 4vh;
+}
+
+/* Clock — bottom right, BIG */
+#wb-clock {
+  position: absolute;
+  bottom: clamp(1.125rem,3.5vh,3rem);
+  right: clamp(0.75rem,2.5vw,2.25rem);
+  text-align: right;
+  z-index: 6;
+  pointer-events: none;
+}
+#wb-clock-time {
+  font-family: Courier, 'Courier New', monospace;
+  font-size: clamp(2.25rem, 6vw, 5.5rem);
+  font-weight: 700;
+  color: #222;
+  line-height: 1;
+}
+#wb-clock-date {
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.875rem, 1.8vw, 1.75rem);
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+/* Left col */
+.wb-left {
+  grid-column: 1; grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5vh;
+  padding-right: 2vw;
+}
+
+.section-title {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 3.5vw, 3.5rem);
+  line-height: 1;
+  margin-bottom: 0.3vh;
+}
+.blue  { color: var(--blue); }
+.green { color: var(--green); }
+.red   { color: var(--red); }
+
+.level-row { margin-bottom: 0.6vh; }
+.level-name {
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(1rem, 2.2vw, 2.5rem);
+}
+.level-name.feet   { color: var(--blue); }
+.level-name.topbot { color: #555; }
+.level-name.sub    { color: var(--red); }
+.level-tech {
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.9375rem, 2vw, 2.25rem);
+  color: #333;
+  padding-left: 0.625rem;
+  margin-top: 0.0625rem;
+}
+
+.wb-divider { grid-column:2; grid-row:1/3; background:#ccc; margin:0 1vw; }
+
+/* Right col */
+.wb-right {
+  grid-column: 3; grid-row: 1;
+  display: flex; flex-direction: column;
+  padding-left: 2vw;
+}
+.event-item { margin-bottom: 1vh; }
+.event-name {
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(0.9375rem, 2vw, 2.25rem);
+  color: var(--red); line-height: 1.2;
+}
+.event-date {
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.875rem, 1.7vw, 2rem);
+  color: #444; padding-left: 0.375rem;
+}
+
+/* Quote */
+.wb-quote {
+  grid-column: 1; grid-row: 2;
+  padding-top: 1.2vh; padding-right: 2vw;
+  border-top: 1px solid #ddd;
+}
+.quote-text {
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.875rem, 1.7vw, 2rem);
+  color: var(--green); line-height: 1.7;
+}
+.quote-attrib {
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(0.8125rem, 1.5vw, 1.75rem);
+  color: var(--green); text-align: right;
+  margin-top: 0.25rem; padding-right: 1.25rem;
+}
+
+.wb-hint {
+  position: absolute;
+  bottom: clamp(0.5rem,1.5vh,1.125rem);
+  left: clamp(0.5rem,1.2vw,1.125rem);
+  right: clamp(0.5rem,1.2vw,1.125rem);
+  height: 1.625rem;
+  background: rgba(0,0,0,0.07);
+  display: flex; align-items: center;
+  padding-left: 1.5vw;
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.625rem, 0.9vw, 1rem);
+  color: #aaa; z-index: 6; pointer-events: none;
+}
+
+#wb-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(244,244,240,0.88);
+  font-family: 'Kalam', cursive;
+  font-size: 1.4rem; color: #888;
+  z-index: 20; transition: opacity 0.5s;
+}
+#wb-loading.hidden { opacity:0; pointer-events:none; }
+
+/* ═══════════════════════════════════
+   TIMER SCREEN — faithful to InvertedTimer source
+   ═══════════════════════════════════ */
+#screen-timer {
+  display: none;
+  width: 100%; height: 100%;
+}
+
+/* Left panel */
+#timer-panel {
+  width: 56%;
+  height: 100%;
+  background: var(--bg-default);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(5rem, 9vh, 7rem) 0.5rem 1rem;
+  position: relative;
+  transition: background-color 0.4s ease;
+}
+#timer-panel.running { background: var(--bg-running); }
+#timer-panel.resting { background: var(--bg-resting); }
+
+/* Branding logo — top left, spins when running */
+#timer-logo {
+  position: absolute;
+  top: 1.5rem; left: 1.5rem;
+  z-index: 10;
+}
+#timer-logo img {
+  width: clamp(3rem, 7vw, 6rem);
+  height: clamp(3rem, 7vw, 6rem);
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+#timer-logo img.spinning {
+  animation: spin 5s linear infinite;
+}
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+/* Settings-style back button — top right */
+#timer-back {
+  position: absolute;
+  top: 1.5rem; right: 1.5rem;
+  color: white;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 3.5rem; height: 3.5rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 1.3rem;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 10;
+}
+#timer-back:hover  { opacity: 0.8; transform: scale(1.05); }
+#timer-back:active { transform: scale(0.95); }
+
+/* Clock: scales with both vw+vh, negative margins kept in sync via custom property */
+.clockContainer {
+  --clk: clamp(1.5rem, min(8vw, 11vh), 7rem);
+  margin-top: calc(var(--clk) * -1);
+  margin-bottom: calc(var(--clk) * -1);
+  font-size: var(--clk);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Courier, 'Courier New', monospace;
+}
+
+/* Main timer row: [+/-] digits [+/-] */
+.timerContainer {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Structured timer: two digit-boxes with labels and a colon */
+.timer-structured {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(0.25rem, 0.5vw, 0.75rem);
+}
+.timer-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.timer-digits {
+  font-size: clamp(4rem, min(16vw, 24vh), 20rem);
+  color: white;
+  font-family: Courier, 'Courier New', 'Lucida Sans Typewriter', monospace;
+  font-weight: 700;
+  line-height: 1;
+}
+.timer-unit-label {
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.6rem, 1.2vw, 1.25rem);
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-top: 0.1em;
+}
+.timer-colon {
+  font-size: clamp(3.5rem, min(14vw, 21vh), 17rem);
+  color: white;
+  font-family: Courier, 'Courier New', monospace;
+  line-height: 1;
+  padding-top: 0;
+  transition: opacity 0.5s;
+}
+.timer-colon.blink { opacity: 0.2; }
+
+/* Icon button columns */
+.iconButtonWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.iconButton {
+  margin: 0.25rem 1vw;
+  padding: 0.25rem;
+  font-size: 2.5vw;
+  background: none;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.iconButton:hover:not(:disabled)  { opacity: 0.8; }
+.iconButton:active:not(:disabled) { transform: scale(0.95); }
+.iconButton:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* SVG icon buttons (PlusSquare / MinusSquare style) */
+.icon-sq {
+  width: clamp(1.5rem, 3vw, 3rem);
+  height: clamp(1.5rem, 3vw, 3rem);
+  stroke: white;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon-sq-sm {
+  width: clamp(1rem, 1.8vw, 1.8rem);
+  height: clamp(1rem, 1.8vw, 1.8rem);
+  stroke: white;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Round counter */
+#timer-round {
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.875rem, 1.8vw, 1.75rem);
+  color: rgba(255,255,255,0.6);
+  margin-top: -1vw;
+  text-align: center;
+}
+
+/* Start/Stop button */
+.startButton, .stopButton {
+  margin: 0;
+  padding: clamp(0.5rem, 1vw, 1.25rem) clamp(2rem, 5vw, 5rem);
+  font-size: clamp(1rem, 2.5vw, 2.25rem);
+  font-weight: bold;
+  color: white;
+  border: 3px solid white;
+  border-radius: clamp(0.5rem, 1vw, 1.25rem);
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.startButton { background-color: #0f5aa8; }
+.stopButton  { background-color: #a81f33; }
+.startButton:hover, .stopButton:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.4); }
+.startButton:active, .stopButton:active { transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+/* Rest timer row */
+.timerSmallContainer {
+  height: clamp(2.5rem, min(5vw, 7vh), 4.5rem);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.timerSmallPlaceholder {
+  height: clamp(2.5rem, min(5vw, 7vh), 4.5rem);
+  width: 100%;
+}
+.timerSmall {
+  margin: 0;
+  font-size: clamp(1.5rem, min(4vw, 5.5vh), 3.5rem);
+  color: white;
+  font-family: Courier, 'Courier New', 'Lucida Sans Typewriter', monospace;
+}
+.iconButtonSmall {
+  margin: 0 0.5vw;
+  padding: 0.25rem;
+  background: none;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.iconButtonSmall:hover:not(:disabled)  { opacity: 0.8; }
+.iconButtonSmall:active:not(:disabled) { transform: scale(0.95); }
+.iconButtonSmall:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Rounds row */
+.roundsRow {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-top: 0.5vw;
+}
+.roundsLabel {
+  font-family: 'Kalam', cursive;
+  font-size: clamp(0.75rem, 1.4vw, 1.375rem);
+  color: rgba(255,255,255,0.6);
+}
+#rounds-display {
+  font-family: Courier, 'Courier New', monospace;
+  font-size: clamp(1rem, 2vw, 2rem);
+  color: white;
+  min-width: 2ch; text-align: center;
+}
+
+.controlsPlaceholder { height: 5rem; width: 100%; }
+
+/* ── RIGHT PANEL: mini whiteboard ── */
+#wb-mini {
+  flex: 1; height: 100%;
+  background: var(--wb-bg);
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+  padding: 2vh 2vw 2vh 2.5vw;
+}
+.wb-mini-frame-top    { position:absolute; top:0;    left:0; right:0;  height:0.4375rem; background:linear-gradient(180deg,var(--wood1),var(--wood2)); }
+.wb-mini-frame-bottom { position:absolute; bottom:0; left:0; right:0;  height:0.4375rem; background:linear-gradient(0deg,var(--wood1),var(--wood2)); }
+.wb-mini-frame-right  { position:absolute; top:0;   right:0; bottom:0; width:0.4375rem;  background:linear-gradient(270deg,var(--wood1),var(--wood2)); }
+
+#mini-clock {
+  position: absolute;
+  bottom: 1.8vh; right: 1.8vw;
+  font-family: Courier, 'Courier New', monospace;
+  font-weight: 700;
+  font-size: clamp(0.875rem, 1.8vw, 1.75rem);
+  color: #333; text-align: right;
+}
+
+.wb-mini-section { margin-bottom: 0.9vh; }
+.wb-mini-title { font-family:'Caveat',cursive; font-weight:700; font-size:clamp(2rem,3.5vw,4.5rem); line-height:1; margin-bottom:0.25rem; }
+.wb-mini-level { font-family:'Permanent Marker',cursive; font-size:clamp(1.25rem,2.2vw,2.75rem); margin-top:0.2rem; }
+.wb-mini-tech  { font-family:'Kalam',cursive; font-size:clamp(1.125rem,2vw,2.5rem); color:#444; padding-left:0.5rem; }
+.wb-mini-divider { width:100%; height:1px; background:#ccc; margin:0.7vh 0; }
+.wb-mini-event { margin-bottom:0.6vh; }
+.wb-mini-event-name { font-family:'Permanent Marker',cursive; font-size:clamp(1.25rem,2.2vw,2.75rem); color:var(--red); line-height:1.2; }
+.wb-mini-event-date { font-family:'Kalam',cursive; font-size:clamp(1rem,1.8vw,2.25rem); color:#555; padding-left:0.375rem; }
+.wb-mini-quote  { font-family:'Kalam',cursive; font-size:clamp(1rem,1.8vw,2.25rem); color:var(--green); line-height:1.5; }
+.wb-mini-attrib { font-family:'Permanent Marker',cursive; font-size:clamp(0.875rem,1.5vw,1.875rem); color:var(--green); text-align:right; padding-right:1rem; margin-top:0.25rem; }
+
+/* Quote section pinned to bottom of mini whiteboard */
+#wb-mini-quote-section {
+  margin-top: auto;
+  padding-top: 0.7vh;
+}
+.wb-mini-quote  { color: white; }
+.wb-mini-attrib { color: white; }
+#wb-mini-quote-section .wb-mini-title { color: white; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ WHITEBOARD ═══════════════ -->
+<div id="screen-whiteboard">
+  <div class="frame-top"></div><div class="frame-bottom"></div>
+  <div class="frame-left"></div><div class="frame-right"></div>
+  <div class="glare"></div>
+
+  <div id="wb-clock">
+    <div id="wb-clock-time">--:-- --</div>
+    <div id="wb-clock-date"></div>
+  </div>
+
+  <div class="wb-inner">
+    <div class="wb-left">
+      <div>
+        <div class="section-title blue">Weekly Theme :</div>
+        <div class="level-row">
+          <div class="level-name feet">FEET</div>
+          <div class="level-tech" id="wb-feet">—</div>
+        </div>
+        <div class="level-row">
+          <div class="level-name topbot">TOP VS BOT</div>
+          <div class="level-tech" id="wb-topvsbot">—</div>
+        </div>
+        <div class="level-row">
+          <div class="level-name sub">SUBMISSION</div>
+          <div class="level-tech" id="wb-submission">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="wb-divider"></div>
+    <div class="wb-right">
+      <div class="section-title red">Upcoming Events :</div>
+      <div id="wb-events" style="margin-top:0.8vh"></div>
+    </div>
+    <div class="wb-quote">
+      <div class="section-title green" style="font-size:clamp(1.125rem,2.2vw,2.25rem)">Weekly Quote :</div>
+      <div class="quote-text" id="wb-quote-text"></div>
+      <div class="quote-attrib" id="wb-quote-attrib"></div>
+    </div>
+  </div>
+
+  <div class="wb-hint">Click anywhere or press Space / Arrow keys to open Round Timer</div>
+  <div id="wb-loading">Loading whiteboard data…</div>
+</div>
+
+
+<!-- ═══════════════ TIMER SCREEN ═══════════════ -->
+<div id="screen-timer">
+
+  <!-- LEFT: Timer panel -->
+  <div id="timer-panel">
+
+    <!-- Spinning IGA logo -->
+    <div id="timer-logo">
+      <img id="timer-logo-img" src="/static/inverted-gear-academy.png"
+        onerror="this.style.display='none'"
+        alt="IGA" />
+    </div>
+
+    <!-- Back button (settings style) -->
+    <button id="timer-back" onclick="goToWhiteboard()" aria-label="Back to whiteboard">←</button>
+
+    <!-- Clock: hidden — was overlapping the main countdown digits -->
+    <div class="clockContainer" id="timer-clock" style="display:none">--:-- --</div>
+
+    <!-- Main work timer with +/- flanks -->
+    <div class="timerContainer" id="timer-container">
+      <div class="iconButtonWrapper" id="work-left-btns">
+        <button class="iconButton" onclick="adjustWork('min',1)" aria-label="Increase minutes">
+          <svg class="icon-sq" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+        <button class="iconButton" id="work-min-minus" onclick="adjustWork('min',-1)" aria-label="Decrease minutes">
+          <svg class="icon-sq" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+      </div>
+
+      <div class="timer-structured" id="timer-display">
+        <div class="timer-unit">
+          <span class="timer-digits" id="timer-min">05</span>
+          <span class="timer-unit-label">min</span>
+        </div>
+        <span class="timer-colon" id="timer-colon">:</span>
+        <div class="timer-unit">
+          <span class="timer-digits" id="timer-sec">00</span>
+          <span class="timer-unit-label">sec</span>
+        </div>
+      </div>
+
+      <div class="iconButtonWrapper" id="work-right-btns">
+        <button class="iconButton" onclick="adjustWork('sec',1)" aria-label="Increase seconds">
+          <svg class="icon-sq" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+        <button class="iconButton" id="work-sec-minus" onclick="adjustWork('sec',-1)" aria-label="Decrease seconds">
+          <svg class="icon-sq" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Round indicator -->
+    <div id="timer-round">Round 1 of 5</div>
+
+    <!-- Start / Stop button (mutually exclusive) -->
+    <div style="display:flex; justify-content:center; margin-top:0.25vw;">
+      <button class="startButton" id="btn-start" onclick="startTimer()">Start</button>
+      <button class="stopButton"  id="btn-stop"  onclick="stopTimer()" style="display:none">Stop</button>
+    </div>
+
+    <!-- Rest timer (hidden while running) -->
+    <div id="rest-section">
+      <div class="timerSmallPlaceholder">
+        <div class="timerSmallContainer">
+          <div class="iconButtonWrapper" style="flex-direction:row">
+            <button class="iconButtonSmall" onclick="adjustRest('min',1)">
+              <svg class="icon-sq-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </button>
+            <button class="iconButtonSmall" id="rest-min-minus" onclick="adjustRest('min',-1)">
+              <svg class="icon-sq-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </button>
+          </div>
+          <h1 class="timerSmall" id="rest-display">01:00</h1>
+          <div class="iconButtonWrapper" style="flex-direction:row">
+            <button class="iconButtonSmall" onclick="adjustRest('sec',1)">
+              <svg class="icon-sq-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </button>
+            <button class="iconButtonSmall" id="rest-sec-minus" onclick="adjustRest('sec',-1)">
+              <svg class="icon-sq-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rounds row -->
+      <div class="roundsRow" style="justify-content:center">
+        <button class="iconButtonSmall" id="rounds-minus" onclick="adjustRounds(-1)">
+          <svg class="icon-sq-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+        <span class="roundsLabel">Rounds:</span>
+        <div id="rounds-display">5</div>
+        <button class="iconButtonSmall" onclick="adjustRounds(1)">
+          <svg class="icon-sq-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Placeholder height when running (keeps layout stable) -->
+    <div class="controlsPlaceholder" id="controls-placeholder" style="display:none"></div>
+
+  </div><!-- /timer-panel -->
+
+  <!-- RIGHT: Mini whiteboard -->
+  <div id="wb-mini">
+    <div class="wb-mini-frame-top"></div>
+    <div class="wb-mini-frame-bottom"></div>
+    <div class="wb-mini-frame-right"></div>
+    <div id="mini-clock">--:-- --</div>
+
+    <div class="wb-mini-section">
+      <div class="wb-mini-title blue">Weekly Theme :</div>
+      <div class="wb-mini-level" style="color:var(--blue)">FEET</div>
+      <div class="wb-mini-tech" id="mini-feet">—</div>
+      <div class="wb-mini-level" style="color:#555; margin-top:0.1875rem">TOP VS BOT</div>
+      <div class="wb-mini-tech" id="mini-topvsbot">—</div>
+      <div class="wb-mini-level" style="color:var(--red); margin-top:0.1875rem">SUBMISSION</div>
+      <div class="wb-mini-tech" id="mini-submission">—</div>
+    </div>
+    <div class="wb-mini-divider"></div>
+    <div class="wb-mini-section">
+      <div class="wb-mini-title red">Upcoming Events :</div>
+      <div id="mini-events" style="margin-top:0.1875rem"></div>
+    </div>
+    <div id="wb-mini-quote-section">
+      <div class="wb-mini-title">Weekly Quote :</div>
+      <div class="wb-mini-quote"  id="mini-quote"></div>
+      <div class="wb-mini-attrib" id="mini-attrib"></div>
+    </div>
+  </div>
+
+</div><!-- /screen-timer -->
+
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQNhaEgsklguzFjNOEwneITCLiftKmHQ_w0vuS_4cguFCLnPBMGTLRk3dh3PGVpr4zuEdGzqGJKi_Cq/pub?output=csv";
+const REFRESH   = 5 * 60 * 1000;
+
+const DEFAULTS = {
+  feet_technique:'Single Transition', topvsbot_technique:'Smash Pass',
+  submission_technique:'Shoulder Crunch',
+  quote_line1:'"If you think, you are late.',
+  quote_line2:"If you're late, you use strength.",
+  quote_line3:"If you use strength, you get tired.",
+  quote_line4:'If you tire, you die."',
+  quote_attrib:'Saulo Ribeiro',
+  event_1_name:'Tap Cancer Out - Philadelphia PA', event_1_date:'November 7th, 2026',
+  event_2_name:'Costa Rica Camp',                  event_2_date:'August 5-10, 2026',
+  event_3_name:'Mexico Camp',                      event_3_date:'November 2nd-6th',
+};
+
+// ─── CLOCK ────────────────────────────────────────────
+function clockStr12() {
+  const now=new Date(); let h=now.getHours();
+  const mn=String(now.getMinutes()).padStart(2,'0');
+  const ap=h>=12?'PM':'AM';
+  if(h>12)h-=12; if(h===0)h=12;
+  return `${String(h).padStart(2,'0')}:${mn} ${ap}`;
+}
+function updateClock(){
+  const t=clockStr12();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now=new Date();
+  document.getElementById('wb-clock-time').textContent=t;
+  document.getElementById('wb-clock-date').textContent=`${days[now.getDay()]}  ${months[now.getMonth()]} ${now.getDate()}`;
+  document.getElementById('timer-clock').textContent=t;
+  document.getElementById('mini-clock').textContent=t;
+}
+setInterval(updateClock,1000); updateClock();
+
+// ─── CSV / WHITEBOARD ─────────────────────────────────
+function parseCSV(txt){
+  const d={};
+  const lines=txt.trim().split('\n');
+  for(let i=1;i<lines.length;i++){
+    const line=lines[i].trim(); if(!line) continue;
+    const ci=line.indexOf(','); if(ci===-1) continue;
+    const key=line.slice(0,ci).trim().toLowerCase();
+    let val=line.slice(ci+1).trim();
+    if(val.startsWith('"')&&val.endsWith('"')) val=val.slice(1,-1);
+    d[key]=val;
+  }
+  return d;
+}
+function renderWhiteboard(data){
+  const g=k=>data[k]||DEFAULTS[k]||'';
+  ['feet','topvsbot','submission'].forEach(id=>{
+    const v=g(id==='topvsbot'?'topvsbot_technique':`${id}_technique`);
+    document.getElementById('wb-'+id).textContent=v;
+    document.getElementById('mini-'+id).textContent=v;
+  });
+  const lines=[g('quote_line1'),g('quote_line2'),g('quote_line3'),g('quote_line4')].filter(Boolean);
+  document.getElementById('wb-quote-text').innerText=lines.join('\n');
+  document.getElementById('wb-quote-attrib').textContent=g('quote_attrib')?'— '+g('quote_attrib'):'';
+  document.getElementById('mini-quote').textContent=lines.join(' ');
+  document.getElementById('mini-attrib').textContent=g('quote_attrib')?'— '+g('quote_attrib'):'';
+  let ev='',mev='';
+  for(let i=1;i<=5;i++){
+    const n=g(`event_${i}_name`),dt=g(`event_${i}_date`);
+    if(!n) continue;
+    ev+=`<div class="event-item"><div class="event-name">${n}</div><div class="event-date">${dt}</div></div>`;
+    mev+=`<div class="wb-mini-event"><div class="wb-mini-event-name">${n}</div><div class="wb-mini-event-date">${dt}</div></div>`;
+  }
+  document.getElementById('wb-events').innerHTML=ev;
+  document.getElementById('mini-events').innerHTML=mev;
+}
+async function fetchData(){
+  try{
+    const r=await fetch(SHEET_URL);
+    if(!r.ok) throw new Error(r.status);
+    renderWhiteboard(parseCSV(await r.text()));
+  } catch(e){ renderWhiteboard(DEFAULTS); }
+  document.getElementById('wb-loading').classList.add('hidden');
+}
+fetchData(); setInterval(fetchData,REFRESH);
+
+// ─── SCREEN SWITCHING ─────────────────────────────────
+function goToTimer(){
+  document.getElementById('screen-whiteboard').style.display='none';
+  document.getElementById('screen-timer').style.display='flex';
+  // Don't auto-reset — preserve settings
+}
+function goToWhiteboard(){
+  stopTimer();
+  document.getElementById('screen-timer').style.display='none';
+  document.getElementById('screen-whiteboard').style.display='flex';
+}
+document.getElementById('screen-whiteboard').addEventListener('click', goToTimer);
+
+// ─── BEEP / BELL ──────────────────────────────────────
+function playBeep(){
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const times = [0, 0.35, 0.70];
+    times.forEach(t => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.7, ctx.currentTime + t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.28);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.30);
+    });
+  } catch(e) {}
+}
+
+// ─── TIMER STATE (mirrors InvertedTimer logic) ─────────
+let desiredMinutes=5, desiredSeconds=0;
+let desiredRestMinutes=1, desiredRestSeconds=0;
+let minutes=5, seconds=0;
+let totalRounds=5, curRound=1;
+let isRunning=false, isResting=false;
+let timerInterval=null;
+
+const fmt=n=>n<10?`0${n}`:String(n);
+
+// Colors from original source
+const BG = {
+  default: '#0c6062',
+  running: '#0d4b09',
+  resting: '#801010',
+};
+
+function setPanelBg(state){
+  const p=document.getElementById('timer-panel');
+  p.style.background = BG[state] || BG.default;
+}
+
+function updateWorkDisplay(){
+  document.getElementById('timer-min').textContent = fmt(minutes);
+  document.getElementById('timer-sec').textContent = fmt(seconds);
+}
+function updateRestDisplay(){
+  document.getElementById('rest-display').textContent=`${fmt(desiredRestMinutes)}:${fmt(desiredRestSeconds)}`;
+}
+function updateRoundsDisplay(){
+  document.getElementById('rounds-display').textContent=totalRounds;
+  document.getElementById('timer-round').textContent=`Round ${curRound} of ${totalRounds}`;
+}
+
+function showSetupControls(show){
+  const btns=['work-left-btns','work-right-btns','rest-section'];
+  btns.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=show?'':'none';
+  });
+  document.getElementById('btn-start').style.display=show?'':'none';
+  document.getElementById('btn-stop').style.display=show?'none':'';
+  document.getElementById('controls-placeholder').style.display=show?'none':'';
+  // disable minus buttons at zero
+  document.getElementById('work-min-minus').disabled = desiredMinutes===0;
+  document.getElementById('work-sec-minus').disabled = desiredSeconds===0;
+  document.getElementById('rest-min-minus').disabled = desiredRestMinutes===0;
+  document.getElementById('rest-sec-minus').disabled = desiredRestSeconds===0;
+  document.getElementById('rounds-minus').disabled   = totalRounds<=1;
+}
+
+function spinLogo(spin){
+  const img=document.getElementById('timer-logo-img');
+  if(img) img.classList.toggle('spinning', spin);
+}
+
+function startTimer(){
+  isResting=false; isRunning=true;
+  curRound=1;
+  minutes=desiredMinutes; seconds=desiredSeconds;
+  setPanelBg('running');
+  spinLogo(true);
+  showSetupControls(false);
+  document.getElementById('timer-round').textContent=`Round ${curRound} of ${totalRounds}`;
+  document.getElementById('wb-mini').classList.add('timer-running');
+  updateWorkDisplay();
+  clearInterval(timerInterval);
+  timerInterval=setInterval(tick,1000);
+}
+
+function stopTimer(){
+  isRunning=false; isResting=false;
+  clearInterval(timerInterval); timerInterval=null;
+  minutes=desiredMinutes; seconds=desiredSeconds;
+  curRound=1;
+  setPanelBg('default');
+  spinLogo(false);
+  const colon = document.getElementById('timer-colon');
+  if(colon) colon.classList.remove('blink');
+  document.getElementById('wb-mini').classList.remove('timer-running');
+  showSetupControls(true);
+  updateWorkDisplay();
+  updateRoundsDisplay();
+}
+
+function toggleRunningResting(){
+  if(isRunning){
+    // Work period done
+    isRunning=false;
+    curRound++;
+    setPanelBg('resting');
+    spinLogo(false);
+    // Auto-start rest
+    minutes=desiredRestMinutes; seconds=desiredRestSeconds;
+    isResting=true;
+    document.getElementById('timer-round').textContent=`Rest — Round ${curRound-1} of ${totalRounds}`;
+    updateWorkDisplay();
+  } else if(isResting){
+    // Rest done
+    isResting=false;
+    if(curRound > totalRounds){
+      // All done
+      stopTimer();
+      return;
+    }
+    // Auto-start next round
+    isRunning=true;
+    setPanelBg('running');
+    spinLogo(true);
+    minutes=desiredMinutes; seconds=desiredSeconds;
+    document.getElementById('timer-round').textContent=`Round ${curRound} of ${totalRounds}`;
+    updateWorkDisplay();
+  }
+}
+
+function tick(){
+  if(!isRunning && !isResting) return;
+
+  // blink colon each tick
+  const colon = document.getElementById('timer-colon');
+  if(colon) colon.classList.toggle('blink');
+
+  if(minutes===0 && seconds===0){
+    if(colon) colon.classList.remove('blink');
+    playBeep();
+    toggleRunningResting();
+    return;
+  }
+  if(minutes!==0 && seconds===0){
+    seconds=59; minutes=minutes-1;
+  } else if(seconds!==0){
+    seconds=seconds-1;
+  }
+  updateWorkDisplay();
+}
+
+// Adjust work time (minutes: +1, seconds: +5 steps — exact from source)
+function adjustWork(part, delta){
+  if(isRunning||isResting) return;
+  if(part==='min'){
+    desiredMinutes=Math.max(0,desiredMinutes+delta);
+    minutes=desiredMinutes;
+  } else {
+    const ns=(desiredSeconds+delta*5+60)%60; // wrap
+    desiredSeconds=ns; seconds=ns;
+  }
+  updateWorkDisplay();
+  showSetupControls(true);
+}
+
+// Adjust rest (minutes: +1, seconds: +5 steps)
+function adjustRest(part, delta){
+  if(isRunning||isResting) return;
+  if(part==='min'){
+    desiredRestMinutes=Math.max(0,desiredRestMinutes+delta);
+  } else {
+    desiredRestSeconds=(desiredRestSeconds+delta*5+60)%60;
+  }
+  updateRestDisplay();
+  showSetupControls(true);
+}
+
+function adjustRounds(delta){
+  if(isRunning||isResting) return;
+  totalRounds=Math.max(1,Math.min(20,totalRounds+delta));
+  updateRoundsDisplay();
+  showSetupControls(true);
+}
+
+// ─── KEYBOARD — exact from source: Space/Arrows start/stop ─
+document.addEventListener('keydown',e=>{
+  const onWB=document.getElementById('screen-whiteboard').style.display!=='none';
+
+  // From whiteboard: any key goes to timer
+  if(onWB){
+    if(e.code==='Space'||e.code==='ArrowRight'||e.code==='ArrowLeft'||
+       e.code==='ArrowUp'||e.code==='ArrowDown'||e.code==='Enter'){
+      e.preventDefault(); goToTimer();
+    }
+    return;
+  }
+
+  // On timer: Space/Arrows toggle start/stop
+  if(e.code==='Space'||e.code==='ArrowRight'||e.code==='ArrowLeft'||
+     e.code==='ArrowUp'||e.code==='ArrowDown'||
+     e.code==='PageUp'||e.code==='PageDown'){
+    const target=e.target;
+    if(target.tagName==='INPUT'||target.tagName==='TEXTAREA') return;
+    e.preventDefault();
+    if(isRunning||isResting) stopTimer();
+    else startTimer();
+  }
+  if(e.code==='Escape') goToWhiteboard();
+});
+
+// ─── INIT ─────────────────────────────────────────────
+updateWorkDisplay();
+updateRestDisplay();
+updateRoundsDisplay();
+showSetupControls(true);
+setPanelBg('default');
+</script>
+</body>
+</html>
